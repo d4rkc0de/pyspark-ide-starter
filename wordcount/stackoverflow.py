@@ -1,11 +1,11 @@
 import re
 
 from pyspark import SparkContext
-from pyspark.sql import SparkSession, Window
+from pyspark.sql import SparkSession, Window, functions
 from pyspark.sql.functions import col, to_date, last_day, lit, when, lower, concat, sum, unix_timestamp, \
     month, lpad, split, expr, udf, posexplode, regexp_replace, collect_set, lag, approx_count_distinct, coalesce, \
     row_number, explode, monotonically_increasing_id, first, from_json, aggregate, create_map, map_concat, to_json, \
-    flatten, transform, collect_list, concat_ws, struct
+    flatten, transform, collect_list, concat_ws, struct, format_number, to_timestamp
 from pyspark.sql.types import StructType, ArrayType, MapType, StringType
 
 
@@ -441,5 +441,40 @@ def q_75368847():
     df.printSchema()
     df.select(struct("additional").alias("additional")).select("additional.*").show(10, False)
 
+
+def q_75670176():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    df = spark.createDataFrame([[2000000.0, 759740220.0]], ['sale_amt', 'total_value'])
+    df.show()
+    df = df.withColumn("new_col", functions.round(col("total_value")).cast(StringType()))
+    df.withColumn("new_col", format_number("total_value", 1)).show()
+
+    @udf(returnType=StringType())
+    def to_string(value):
+        return str(value)
+
+    df.withColumn("new_col", to_string(col("total_value"))).show()
+    df.withColumn("new_col", transform("total_value", lambda x: str(x))).show()
+
+
+def q_75587842():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    url = "https://gist.githubusercontent.com/JishanAhmed2019/e464ca4da5c871428ca9ed9264467aa0/raw/da3921c1953fefbc66dddc3ce238dac53142dba8/failure.csv"
+    from pyspark import SparkFiles
+    spark.sparkContext.addFile(url)
+    df = spark.read.csv(SparkFiles.get("failure.csv"), header=True, sep='\t')
+    df.show(2)
+    spark.range(1).write.parquet("proto.parquet")
+
+
+def q_75699018():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    df = spark.createDataFrame([["2023-03-02T07:32:00+00:00"]], ['timestamp'])
+    df.show(truncate=False)
+    df = df.withColumn("timestamp_utc", to_timestamp("timestamp", "yyyy-MM-dd'T'HH:mm:ssXXX"))
+    df.show(truncate=False)
+    df.printSchema()
+
+
 if __name__ == "__main__":
-    q_75368847()
+    q_75699018()
