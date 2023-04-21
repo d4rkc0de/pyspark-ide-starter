@@ -1,0 +1,33 @@
+{
+  "tables": [
+    {
+      "name": "PrimaryResult",
+      "columns": [
+        {
+          "name": "TenantId",
+          "type": "string"
+        },
+        {
+          "name": "TimeGenerated",
+          "type": "datetime"
+        },
+        {
+          "name": "CorrelationId",
+          "type": "string"
+        },
+        {
+          "name": "UserName",
+          "type": "string"
+        }
+      ],
+      "rows": [
+        [
+          "1341234",
+          "5143534",
+          "14314123",
+          "test@test.cloud"
+        ]
+      ]
+    }
+  ]
+}

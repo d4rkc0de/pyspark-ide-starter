@@ -1,12 +1,15 @@
 import re
+from locale import format_string
 
-from pyspark import SparkContext
-from pyspark.sql import SparkSession, Window
-from pyspark.sql.functions import col, to_date, last_day, lit, when, lower, concat, sum, unix_timestamp, \
+from pyspark import SparkContext, SparkConf
+from pyspark.sql import SparkSession, Window, functions
+from pyspark.sql.functions import col, to_date, last_day, lit, when, lower, concat, sum, min, unix_timestamp, \
     month, lpad, split, expr, udf, posexplode, regexp_replace, collect_set, lag, approx_count_distinct, coalesce, \
     row_number, explode, monotonically_increasing_id, first, from_json, aggregate, create_map, map_concat, to_json, \
-    flatten, transform, collect_list, concat_ws, struct
-from pyspark.sql.types import StructType, ArrayType, MapType, StringType
+    flatten, transform, collect_list, concat_ws, struct, substring, to_timestamp, regexp_extract, trim, hour, \
+    current_timestamp, date_add, isnull, isnan, array_join, broadcast, arrays_zip
+from pyspark.sql.types import StructType, ArrayType, MapType, StringType, StructField, IntegerType
+import html
 
 
 def q_1():
@@ -244,7 +247,7 @@ def q_74908984():
 
     df1.show()
     df2.show()
-    df1.join(df2, col("join_column") == col("join_column_2"), "left") \
+    df1.join(broadcast(df2), col("join_column") == col("join_column_2"), "left") \
         .withColumn("column2", when(col("column2") == col("column2_2"), None).otherwise(
         coalesce(col("column2"), col("column2_2")))) \
         .withColumn("column3",
@@ -255,7 +258,7 @@ def q_74908984():
 def q_74965630():
     spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.read.option("header", "true").csv("./ressources/1.csv", sep='┐')
-    df.show()
+    df.repartition(80, "ID1", "ID2", "ID3").show()
 
 
 def q_75060820():
@@ -441,5 +444,441 @@ def q_75368847():
     df.printSchema()
     df.select(struct("additional").alias("additional")).select("additional.*").show(10, False)
 
+
+def q_75629735():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame([("2023-03-03 17:21:00", 10, '[{"num":55,"cor":32},{"num":14,"cor":54}]'),
+                                ("2023-03-03 17:35:00", 11, '[{"num":55,"cor":98},{"num":32,"cor":77}]')],
+                               ["timestamp", "offset", "stringdecode"])
+    df.show(10, False)
+    df.printSchema()
+    df.withColumn("stringdecode", expr("substring(stringdecode, 2, length(stringdecode)-2)")) \
+        .show(truncate=False)
+
+
+def q_75758203():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame([
+        (1, "10/1/2016 07:25:52 AM"),
+        (1, "10/1/2016 08:53:38 AM"),
+        (1, "10/1/2016 11:18:50 AM"),
+        (1, "10/1/2016 11:19:32 AM"),
+        (2, "10/1/2016 10:25:36 AM"),
+        (2, "10/1/2016 10:28:08 AM"),
+        (3, "10/1/2016 10:57:41 AM"),
+        (3, "10/1/2016 08:57:10 PM")
+    ],
+        ["UID", "Time"])
+    df.show(10, False)
+    w = Window.orderBy("Time")
+    df = df.withColumn("Time", to_timestamp("Time", "MM/d/yyyy hh:mm:ss a")).orderBy("Time").withColumn("PREV_Time",
+                                                                                                        lag("Time", 1,
+                                                                                                            None).over(
+                                                                                                            w)).withColumn(
+        "DIFF", col("Time") - col("PREV_Time"))
+    df.show(10, False)
+
+
+def q_75761644():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+    df = spark.read.option("multiline", "true").json("./ressources/75761644.json")
+    df.printSchema()
+    df.show()
+    df = df.select(col("Id"), col("device"), explode(col("Ads")).alias("Ads")) \
+        .select("Id", "device", "Ads.*") \
+        .select(col("Id"), col("device"), explode(col("Adlist")).alias("Adlist"), col("placement")) \
+        .select("Id", "device", "placement", "Adlist.*")
+    df.printSchema()
+    df.show()
+
+
+def apply_schema_to_dataframe(df, schema):
+    for field in schema.fields:
+        df = df.withColumn(field.name, col(field.name).cast(field.dataType)).withMetadata(field.name, field.metadata).n
+    return df
+
+
+def q_75800516():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df1 = spark.createDataFrame([(1, 2, 3), (2, 3, 4)], ["A", "B", "C"])
+    df2 = spark.createDataFrame([(1, 2, 3), (2, 3, 4)], ["B", "C", "A"])
+
+    fSchema = StructType([
+        StructField("A", IntegerType(), False),
+        StructField("B", IntegerType(), True),
+        StructField("C", IntegerType(), True)
+    ])
+
+    apply_schema_to_dataframe(df1, fSchema).show()
+    apply_schema_to_dataframe(df2, fSchema).show()
+    apply_schema_to_dataframe(df2, fSchema).printSchema()
+
+
+def q_75803825():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame(
+        [("2023-03-05 MONTH   2020M03 2020-03-01  2020-03-31  ADDR    Fargo-Wahpeton , ND-MN   61.30   98.52   433.23",
+          1),
+         ("2023-03-05 MONTH   2020M03 2020-03-01  2020-03-31  STATE   TX  43.38   74.61   380.82", 2),
+         (
+             "2023-03-05 MONTH   2020M03 2020-03-01  2020-03-31  ADDR    Kalamazoo-Battle Creek-Portage, MI  30.19   49.06   266.33",
+             3)
+         ],
+        schema=["value", "id"])
+    df.show(truncate=False)
+    regex_pattern = '([\s]*)((?<!,)[\s]+)'
+
+    columns = ["insert_dt", "sub_type", "ret_month", "month_start", "month_end", "area_class", "area_details",
+               "sub_paid", "sub_pending", "sub_annual_amt"]
+
+    for idx, column in enumerate(columns):
+        df = df.withColumn(column, trim(split("value", regex_pattern).getItem(idx)))
+    df.show(truncate=False)
+
+
+def q_75878694():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame(spark.sparkContext.parallelize([
+        ['A', 'T1', '2023-01-01'],
+        ['A', 'T1', '2023-01-02'],
+        ['A', 'T2', '2023-01-03'],
+        ['A', 'T2', '2023-01-04'],
+        ['A', 'T2', '2023-01-05'],
+        ['A', 'T1', '2023-01-06'],
+        ['A', 'T1', '2023-01-07'],
+        ['A', 'T1', '2023-01-08'],
+        ['A', 'T1', '2023-01-09'],
+        ['A', 'T1', '2023-01-10'],
+        ['B', 'T1', '2023-01-01'],
+        ['B', 'T1', '2023-01-02'],
+        ['B', 'T1', '2023-01-03'],
+        ['B', 'T1', '2023-01-04'],
+        ['B', 'T1', '2023-01-05'],
+    ]),
+        ['Person', 'Task', 'Time'])
+    df.show(100, False)
+    w = Window.orderBy("Person", "Time")
+    df = df.withColumn("Prev_Task", lag("Task", 1, None).over(w)) \
+        .withColumn("Prev_Person", lag("Person", 1, None).over(w)) \
+        .withColumn("runID",
+                    when((col("Prev_Task").isNotNull and col("Task") != col("Prev_Task")) | (
+                            col("Person") != col("Prev_Person")), 1).otherwise(0)) \
+        .withColumn("runID", sum("runID").over(w) + 1).drop("Prev_Task", "Prev_Person")
+    df.show(100, False)
+
+
+def q_75888427():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame(spark.sparkContext.parallelize([
+        [1, 0, "2022-10-01"],
+        [1, 1, "2022-10-02"],
+        [1, 0, "2022-10-03"],
+        [1, 0, "2022-10-04"],
+        [1, 0, "2022-10-20"],
+        [1, 1, "2023-02-01"],
+    ]),
+        ['id', 'flag_code', 'date'])
+
+    w = Window.orderBy("date")
+    df = df.withColumn("diff", when(col("flag_code") == lag("flag_code").over(w), 0).otherwise(1)) \
+        .withColumn("sum", sum("diff").over(w)) \
+        .withColumn("next_sum", col("sum") + 1)
+    df_min = df.groupby("sum").agg(min("date").alias("next_date"))
+    # df = df.drop("sum").join(df_min, df.next_sum == df_min.sum, "left")#.select("id", "flag_code", "date", "next_date")
+    df.orderBy("date").show()
+
+
+def q_75920419():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame(spark.sparkContext.parallelize([
+        [1, "me &amp; you", "value"],
+        [2, "&gt; &quot;", None],
+    ]), ['id', 'text', 'test'])
+
+    def unescape_html(value):
+        return html.unescape(value) if isinstance(value, str) else value
+
+    unescape_html_udf = udf(unescape_html)
+    for column in df.columns:
+        df = df.withColumn(column, unescape_html_udf(col(column)))
+    df.show()
+
+
+def q_75926155():
+    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
+    df = spark.createDataFrame(spark.sparkContext.parallelize([
+        [1, "me &amp; you", "value"],
+        [2, "&gt; &quot;", None],
+    ]), ['id', 'text', 'test'])
+    df.show()
+    df.withColumn("hour", lpad(hour(to_timestamp(current_timestamp(), "yyyy-MM-dd HH:mm:ss 'UTC'")), 2, "0")).show()
+
+
+def q_75942148():
+    # create a SparkSession
+    from pyspark.sql import functions as F
+    spark = SparkSession.builder.appName("DateDataFrame").getOrCreate()
+
+    # define start_date and end_date
+    start_date = "1900-01-01"
+    end_date = "2022-01-31"
+
+    from datetime import datetime
+    start_date_obj = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date_obj = datetime.strptime(end_date, '%Y-%m-%d')
+    delta = end_date_obj - start_date_obj
+
+    date_df = spark.range(0, delta.days).select(
+        F.date_add(F.to_date(F.lit(start_date)), F.col("id").cast("int")).alias("date"))
+    date_df.withColumn("percentage", regexp_replace(lit("10.62%"), "%", "").cast("double") / 100).show()
+    print(10.62 / 100)
+
+
+def q_75957287():
+    # create a dataframe
+    spark = SparkSession.builder.appName("DateDataFrame").getOrCreate()
+    df = spark.createDataFrame([
+        (1, ""),
+        (None, "val1"),
+        (2, "val2"),
+        (None, ""),
+    ], ['col_1', 'col_2'])
+
+    # filter out rows where col_1 is empty or a string value and col_2 is empty
+    filtered_df = df.filter((~isnull('col_1')) & (~isnan('col_2')) & (col("col_2") != ""))
+
+    # show the result
+    df.show()
+    filtered_df.show()
+
+
+def q_75957812():
+    spark = SparkSession.builder.appName("DateDataFrame").getOrCreate()
+    data = [("xreplacey me", "replace"), ("I love me", "love"), ("some text", "hello")]
+    df = spark.createDataFrame(data, ['c1', 'c2'])
+    df.show()
+    df.withColumn("c1", expr('regexp_replace(c1, concat("x" , c2, "y"), "")')).show()
+
+
+def q_75986968():
+    spark = SparkSession.builder.appName("DateDataFrame").getOrCreate()
+    data = [("Kabelleng", "OB10341_000 - Sling "), ("Kabelleng", None), ("Kabelleng", None),
+            ("Kabelleng_2", "OB20121_000 - Sling"), ("Kabelleng_2", None), ("Kabelleng_2", "OB20121_000 - Sling (2)")]
+    df = spark.createDataFrame(data, ['AssetName', 'AssetCategoryName'])
+    df.show(truncate=False)
+    w = Window.partitionBy("AssetName")
+    df.withColumn("AssetCategoryName",
+                  coalesce(col("AssetCategoryName"), first("AssetCategoryName", True).over(w))).show(truncate=False)
+
+
+def q_75995607():
+    spark = SparkSession.builder.appName("DateDataFrame").getOrCreate()
+    data = [
+        ("a1", "Engalnd", None),
+        ("a2", "Engalnd", None),
+        ("b1", "Engalnd", None),
+        ("b2", "Engalnd", None),
+        ("c1", "Engalnd", None),
+        ("c2", "Engalnd", None),
+        ("er3", "Engalnd", None),
+        ("po9", "Engalnd", None),
+        ("ee4", "Engalnd", None),
+        ("e4", "Engalnd", None),
+        ("t5", "Engalnd", None),
+        ("u8", "Engalnd", None),
+        ("r4", "Engalnd", None),
+        ("zx1", "Engalnd", None),
+        ("11d", "Engalnd", None),
+        ("22", "Engalnd", None),
+        ("2p", "Engalnd", None),
+        ("3jk", "Engalnd", None),
+        ("56h", "Engalnd", None),
+        ("a78", "Engalnd", None),
+        ("xxx", "Engalnd", "value1"),
+        ("zzz", "Engalnd", "value2"),
+    ]
+    df = spark.createDataFrame(data, ['Id_a', 'Country', 'Type'])
+
+    missingTypeDf = df.filter(col("Type").isNull())
+    notMissingTypeDf = df.filter(~col("Type").isNull())
+
+    from pyspark.sql.functions import rand
+    fractions = [0.8, 0.2]
+
+    # Split the DataFrame
+    chunkDf1, chunkDf2 = missingTypeDf.randomSplit(fractions, seed=13)
+
+    chunkDf1 = chunkDf1.withColumn("Type", lit("R"))
+    chunkDf2 = chunkDf2.withColumn("Type", lit("NR"))
+
+    resultDf = notMissingTypeDf.unionByName(chunkDf1).unionByName(chunkDf2)
+
+    resultDf.show(200, truncate=False)
+
+
+def q_4628618():
+    spark = SparkSession.builder.appName("DateDataFrame").getOrCreate()
+    data = [
+        ("The error is in %s value is %s.", "xx", "z"),
+        ("The new cond is in %s is %s.", "y", "ww"),
+    ]
+    df = spark.createDataFrame(data, ['ErrorDescBefore', 'name', 'value'])
+
+    format_udf = udf(lambda str, name, value: str.replace('%s', name, 1).replace('%s', value, 1))
+
+    df.withColumn("ErrorDescAfter", format_udf(col("ErrorDescBefore"), col("name"), col("value"))).show(truncate=False)
+    df = df.withColumn("ErrorDescAfter", regexp_replace(col("ErrorDescBefore"), col("name"), "", 1)).show(
+        truncate=False)
+
+
+def q_75996404():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    data = [
+        (1,
+         "questionA : put returns between paragraphs questionB : indent code by 4 spaces questionC : for linebreak add 2 spaces at end"),
+        (2, "questionA : add language identifier questionB : create code fences questionC : to highlight code"),
+    ]
+    df = spark.createDataFrame(data, ['id', 'description'])
+
+    df.withColumn("regex", split("description", "questionB\\s+:*\\s+").getItem(1)) \
+        .withColumn("regex", trim(split("regex", "question").getItem(0))).show(truncate=False)
+
+
+def q_75998018():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    data = [
+        (1, "A"),
+        (2, "B"),
+        (3, "C"),
+        (4, "D"),
+        (5, "E"),
+    ]
+    df = spark.createDataFrame(data, ['id', 'val'])
+    df.withColumn("index", monotonically_increasing_id() + 1).show()
+
+
+def q_76003512():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    data = [
+        (123, 345, "24/03/2023 09:06"),
+        (123, 345, "24/03/2023 09:06"),
+        (123, 345, "24/03/2023 09:04"),
+        (234, 567, "24/03/2023 09:05"),
+        (234, 567, "24/03/2023 09:05"),
+        (234, 567, "23/03/2023 09:05"),
+    ]
+    df = spark.createDataFrame(data, ['vehicleNumber', 'ProductionNumber', 'checkDate'])
+    df.show()
+
+    from pyspark.sql.functions import max, to_timestamp
+    from pyspark.sql.window import Window
+
+    # Convert checkDate to datetime format
+    df = df.withColumn("checkDate", to_timestamp("checkDate", "dd/MM/yyyy HH:mm"))
+
+    # Define the window specification
+    windowSpec = Window.partitionBy(["vehicleNumber", "ProductionNumber"])
+
+    # Apply the window function and select the rows with max checkDate
+    maxDateDF = df.select("*", max("checkDate").over(windowSpec).alias("maxDate")) \
+        .filter("checkDate = maxDate") \
+        .drop("maxDate")
+
+    maxDateDF.show()
+
+
+def q_76005319():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    data = [
+        ("First", "a a a a b c d e f c d s"),
+        ("Second", "d f g r b d s z e r a e"),
+        ("Thirs", "d f g v c x w b c x s d f e"),
+    ]
+    df = spark.createDataFrame(data, ['column1', 'column2'])
+    df.show()
+
+    pattern = "(?i)\\b(?:b\\W+)(\\w+\\W+\\w+\\W+\\w+\\W+\\w+\\W+\\w+)\\b"
+    df = df.withColumn("column2", regexp_extract(col("column2"), pattern, 1))
+    df.show(truncate=False)
+
+
+def q_76013013():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    data = [
+        ("apple", 1, 4, None),
+        ("apple", 2, None, -2),
+        ("apple", 3, None, 5),
+        ("banana", 1, 12, None),
+        ("banana", 2, None, 4),
+        ("banana", 1, 1, None),
+        ("banana", 2, None, -1),
+    ]
+    df = spark.createDataFrame(data, ["Category", "Time", "Stock-level", "Stock-change"])
+    df.show()
+
+    get_default = lambda column: when(column.isNull(), 0).otherwise(column)
+    w = Window.partitionBy("Category").orderBy("Time")
+    df.withColumn("Stock-level", lag("Stock-level").over(w) + get_default(col("Stock-change"))).show()
+
+
+def q_76029862():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    read_df = spark \
+        .read \
+        .option("timestampFormat", "yyyy-MM-dd HH:mm:ss.SSS 'UTC'") \
+        .option("inferSchema", "true") \
+        .option("inferTimestamp", "true") \
+        .json("./ressources/76029862.json")
+    read_df.show()
+    read_df.printSchema()
+
+
+def q_76073065():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    df = spark.read.option("inferSchema", "true").option("multiline", "true").json("./ressources/76073065.json")
+    df = df.withColumn("tables", explode(col("tables"))).select("tables.*").withColumn("rows", explode(col("rows"))) \
+        .withColumn("tmp", explode(arrays_zip("columns", "rows"))).select("tmp.columns.name", "tmp.rows")
+
+    df.groupBy(lit(1)).pivot("name").agg(first(col("rows"))).drop("1").show()
+
+
+def q_76076409():
+    spark = SparkSession.builder.appName("test").getOrCreate()
+    df = spark.createDataFrame(
+        [
+            (1001, "2023-04-01", False, 0, 0),
+            (1001, "2023-04-02", False, 0, 0),
+            (1001, "2023-04-03", False, 1, 1),
+            (1001, "2023-04-04", False, 1, 1),
+            (1001, "2023-04-05", True, 4, 3),
+            (1001, "2023-04-06", False, 4, 3),
+            (1001, "2023-04-07", False, 4, 3),
+            (1001, "2023-04-08", False, 10, 6),
+            (1001, "2023-04-09", True, 10, 0),
+            (1001, "2023-04-10", False, 12, 2),
+            (1001, "2023-04-11", False, 13, 3),
+        ],
+        ["id", "date", "reset", "cumsum", "new_cumsum"],
+    )
+
+    w = Window.orderBy("date")
+    w2 = Window.partitionBy("partition").orderBy("date")
+    df = df.withColumn("diff", col("cumsum") - lag("cumsum", default=0).over(w)) \
+        .withColumn("partition", when(~col("reset"), 0).otherwise(1)) \
+        .withColumn("partition", sum("partition").over(w)) \
+        .withColumn("new_cumsum_2", sum(col("diff")).over(w2)).drop("diff", "partition")
+
+    df.show()
+
+
+# not = ~
 if __name__ == "__main__":
-    q_75368847()
+    q_76076409()

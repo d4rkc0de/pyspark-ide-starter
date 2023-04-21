@@ -1,0 +1,46 @@
+{
+  "ID": "abc123",
+  "device": "mobile",
+  "Ads": [
+    {
+      "placement": "topright",
+      "Adlist": [
+        {
+          "name": "ad1",
+          "subtype": "placeholder1",
+          "category": "socialmedia"
+        },
+        {
+          "name": "ad2",
+          "subtype": "placeholder2",
+          "category": "media"
+        },
+        {
+          "name": "ad3",
+          "subtype": "placeholder3",
+          "category": "printingpress"
+        }
+      ]
+    },
+    {
+      "placement": "bottomleft",
+      "Adlist": [
+        {
+          "name": "ad4",
+          "subtype": "placeholder4",
+          "category": "socialmedia"
+        },
+        {
+          "name": "ad5",
+          "subtype": "placeholder5",
+          "category": "media"
+        },
+        {
+          "name": "ad6",
+          "subtype": "placeholder6",
+          "category": "printingpress"
+        }
+      ]
+    }
+  ]
+}
