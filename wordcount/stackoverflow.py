@@ -1,16 +1,18 @@
 import re
 
 from pyspark import SparkContext
-from pyspark.sql import SparkSession, Window, functions
+from pyspark.sql import SparkSession, Window, functions, Column
 from pyspark.sql.functions import col, to_date, last_day, lit, when, lower, concat, sum, unix_timestamp, \
     month, lpad, split, expr, udf, posexplode, regexp_replace, collect_set, lag, approx_count_distinct, coalesce, \
     row_number, explode, monotonically_increasing_id, first, from_json, aggregate, create_map, map_concat, to_json, \
-    flatten, transform, collect_list, concat_ws, struct, to_timestamp, format_number
+    flatten, transform, collect_list, concat_ws, struct, to_timestamp, format_number, isnan, unhex, substring, \
+    dense_rank
 from pyspark.sql.types import StructType, ArrayType, MapType, StringType
+
+spark = SparkSession.builder.getOrCreate()
 
 
 def q_1():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     data1 = [
         ["John", "1932-11-14"],
         ["Maike", "1932-10-14"]
@@ -65,8 +67,6 @@ def q_74849759():
 
 
 def q_74864258():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
-
     data2 = [
         ["Aries", "03-21", "04-19"],
         ["Taurus", "04-20", "05-20"],
@@ -89,8 +89,6 @@ def q_74864258():
 
 
 def q_74865641():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
-
     data = [
         ["2022", "January"],
         ["2021", "December"],
@@ -104,8 +102,6 @@ def q_74865641():
 
 
 def q_74874646():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
-
     data = [
         ["sumit", 30, "bangalore"],
         ["kapil", 32, "hyderabad"],
@@ -120,8 +116,6 @@ def q_74874646():
 
 
 def q_74859950():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
-
     data = [
         ["Hello is  $1620.00 per hello;"],
         ["Hello is recalculated to be 15% of item."],
@@ -138,7 +132,6 @@ def q_74859950():
 
 
 def q_74880468():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     data = [["100MG"], ["1EA"], ["100MG"]]
     df = spark.createDataFrame(data).toDF("size")
 
@@ -151,7 +144,6 @@ def q_74880468():
 
 
 def q_74892964():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     data = [
         ["2022-12-20", 30, "Mary"],
         ["2022-12-21", 12, "Mary"],
@@ -219,7 +211,6 @@ def q_74892964():
 
 
 def q_74908984():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     data1 = [
         ["a", 25, "ast"],
         ["b", None, "phone"],
@@ -253,13 +244,11 @@ def q_74908984():
 
 
 def q_74965630():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.read.option("header", "true").csv("./ressources/1.csv", sep='┐')
     df.show()
 
 
 def q_75060820():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame([(1, 4, 3), (2, 4, 2), (3, 4, 5), (1, 5, 3), (2, 5, 2), (3, 6, 5)], ['a', 'b', 'c'])
     w = Window.partitionBy(col("b")).orderBy(col("b"))
     df.withColumn("d", row_number().over(w)).filter(col("d") <= 2).show()
@@ -267,7 +256,7 @@ def q_75060820():
 
 def q_75061097():
     # prepare data
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
+
     df = spark.read.option("multiline", "true").json("./ressources/75061097.json")
     df.printSchema()
     df.select("context.custom.dimensions").show(truncate=False)
@@ -290,7 +279,6 @@ def q_75061097():
 
 
 def q_75061097_2():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.read.option("multiline", "true").json("./ressources/75061097.json")
 
     # Save dimesions's object schema for later use
@@ -316,7 +304,6 @@ def q_75061097_2():
 
 
 def q_75154979():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     test_df = spark.createDataFrame([
         (1, 1, 1, 0, 1, 1)
     ], ("b1", "b2", "b3", "b4", "b5", "b6"))
@@ -328,7 +315,6 @@ def q_75154979():
 
 
 def q_75207950():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame([
         (2, "2022-02-02", "2022-02-01 10:03"),
         (3, "2022-02-01", "2022-02-01 10:00"),
@@ -360,7 +346,6 @@ def q_75207950():
 
 
 def q_75207950_2():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame([
         (2, "2022-02-02", "2022-02-01 10:03"),
         (3, "2022-02-01", "2022-02-01 10:00"),
@@ -391,14 +376,12 @@ def q_75207950_2():
 
 
 def q_75289895():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame([(142, ["Big House", "Green frog"])], ["AnonID", "New_Data"])
     df = df.withColumn("New_Data", flatten(transform('New_Data', lambda x: split(x, ' '))))
     df.show(truncate=False)
 
 
 def q_75300476():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame(
         data=[["john", "tomato", 1.99, 1], ["john", "carrot", 0.45, 1], ["bill", "apple", 0.99, 1],
               ["john", "banana", 1.29, 1], ["bill", "taco", 2.59, 1]], schema=["name", "food", "price", "col_1"])
@@ -408,7 +391,6 @@ def q_75300476():
 
 
 def q_75378166():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame(
         data=[["console", "ps5", -10, 8, 1], ["console", "xbox", -8, 6, 0],
               ["console", "ps5", -5, 4, 4], ["console", "xbox", -1, 10, 7], ["console", "xbox", 0, 2, 3],
@@ -428,22 +410,7 @@ def q_75378166():
     df.show(10, False)
 
 
-def q_75368847():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
-    df = spark.createDataFrame([("FTE:56e662f", "CATENA", 0, "CURRENT",
-                                 ({"hr_code": 84534, "bgc_val": 170187, "interviewPanel": 6372, "meetingId": 3671})),
-                                ("FTE:633e7bc", "Data Science", 0, "CURRENT",
-                                 ({"hr_code": 21036, "bgc_val": 170187, "interviewPanel": 764, "meetingId": 577})),
-                                ("FTE:d9badd2", "CATENA", 0, "CURRENT",
-                                 ({"hr_code": 60696, "bgc_val": 88770}))],
-                               ["empId", "organization", "h_cd", "status", "additional"])
-    df.show(10, False)
-    df.printSchema()
-    df.select(struct("additional").alias("additional")).select("additional.*").show(10, False)
-
-
 def q_75670176():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame([[2000000.0, 759740220.0]], ['sale_amt', 'total_value'])
     df.show()
     df = df.withColumn("new_col", functions.round(col("total_value")).cast(StringType()))
@@ -458,7 +425,6 @@ def q_75670176():
 
 
 def q_75587842():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     url = "https://gist.githubusercontent.com/JishanAhmed2019/e464ca4da5c871428ca9ed9264467aa0/raw/da3921c1953fefbc66dddc3ce238dac53142dba8/failure.csv"
     from pyspark import SparkFiles
     spark.sparkContext.addFile(url)
@@ -468,7 +434,6 @@ def q_75587842():
 
 
 def q_75699018():
-    spark = SparkSession.builder.master("local[*]").getOrCreate()
     df = spark.createDataFrame([["2023-03-02T07:32:00+00:00"]], ['timestamp'])
     df.show(truncate=False)
     df = df.withColumn("timestamp_utc", to_timestamp("timestamp", "yyyy-MM-dd'T'HH:mm:ssXXX"))
@@ -476,5 +441,429 @@ def q_75699018():
     df.printSchema()
 
 
+def q_75368847():
+    df = spark.createDataFrame([("FTE:56e662f", "CATENA", 0, "CURRENT",
+                                 ({"hr_code": 84534, "bgc_val": 170187, "interviewPanel": 6372, "meetingId": 3671})),
+                                ("FTE:633e7bc", "Data Science", 0, "CURRENT",
+                                 ({"hr_code": 21036, "bgc_val": 170187, "interviewPanel": 764, "meetingId": 577})),
+                                ("FTE:d9badd2", "CATENA", 0, "CURRENT",
+                                 ({"hr_code": 60696, "bgc_val": 88770}))],
+                               ["empId", "organization", "h_cd", "status", "additional"])
+    df.show(10, False)
+    df.printSchema()
+    df.select(struct("additional").alias("additional")).select("additional.*").show(10, False)
+
+
+def q_76076547():
+    df = spark.createDataFrame([(1, "2023-12-10T11:00:00.826+0000")],
+                               ["id", "etaTs"])
+    df.show(10, False)
+    df = df.withColumn(
+        "etaTs",
+        to_timestamp(col("etaTs"), "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+    )
+    df.show()
+
+
+def q_76078849():
+    df = spark.createDataFrame([
+        (1, [[1, 30981733]]),
+        (1, [[1, 598319049], [2, 38453298], [3, 2007569845]]),
+        (1, [[1, 10309216]]),
+        (1, [[1, 730446111], [2, 617024811], [3, 665689309], [4, 883699488], [5, 159896736]]),
+        (1, [[1, 10290923], [2, 33282357]]),
+        (1, [[1, 102649381], [2, 10294853], [3, 10294854], [4, 44749181], [5, 35132896]]),
+        (1, [[1, 10307642], [2, 10307636], [3, 15754215], [4, 45612359], [5, 10307635]]),
+        (1, [[1, 43982130], [2, 15556050], [3, 15556051], [4, 11961012], [5, 16777263]]),
+        (1, [[1, 849607426], [2, 185158834], [3, 11028011], [4, 10309801], [5, 11028010]]),
+        (1, [[1, 21905160], [2, 21609422], [3, 21609417], [4, 20554612], [5, 20554601]])
+    ], ["id", "substitutes"])
+    df.show(10, False)
+    df.printSchema()
+    df.rdd.map(lambda row: list(map(lambda arr: arr[-1], row.substitutes))).toDF().show()
+    df = df.withColumn("substitutes_2", concat(*[col("substitutes")[i] for i in range(5)]))
+    df = df.select("*", *[col("substitutes_2").getItem(i).alias(f"new_column_{i}") for i in range(5)])
+    df.show(10, False)
+
+
+def q_76036392():
+    from pyspark.sql import SparkSession
+    from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+    import pyspark.sql.functions as f
+    from pyspark.sql.functions import lit
+
+    # User input for number of rows
+    n_a = 10
+    n_a_c = 5
+    n_a_c_d = 3
+    n_a_c_e = 4
+
+    # Define the schema for the DataFrame
+    schema_a = StructType([StructField("id1", StringType(), True)])
+    schema_a_b = StructType(
+        [
+            StructField("id1", StringType(), True),
+            StructField("id2", StringType(), True),
+            StructField("extra", StringType(), True),
+        ]
+    )
+    schema_a_c = StructType(
+        [
+            StructField("id1", StringType(), True),
+            StructField("id3", StringType(), True),
+        ]
+    )
+    schema_a_c_d = StructType(
+        [
+            StructField("id3", StringType(), True),
+            StructField("id4", StringType(), True),
+        ]
+    )
+    schema_a_c_e = StructType(
+        [
+            StructField("id3", StringType(), True),
+            StructField("id5", StringType(), True),
+        ]
+    )
+
+    # Create a list of rows with increasing integer values for "id1" and a constant value of "1" for "id2"
+    rows_a = [(str(i),) for i in range(1, n_a + 1)]
+    rows_a_integers = [str(i) for i in range(1, n_a + 1)]
+    rows_a_b = [(str(i), str(1), "A") for i in range(1, n_a + 1)]
+
+    def get_2d_list(ids_part_1: list, n_new_ids: int):
+        rows = [
+            [
+                (str(i), str(i) + "_" + str(j))
+                for i in ids_part_1
+                for j in range(1, n_new_ids + 1)
+            ]
+        ]
+        return [item for sublist in rows for item in sublist]
+
+    rows_a_c = get_2d_list(ids_part_1=rows_a_integers, n_new_ids=n_a_c)
+    rows_a_c_d = get_2d_list(ids_part_1=[i[1] for i in rows_a_c], n_new_ids=n_a_c_d)
+    rows_a_c_e = get_2d_list(ids_part_1=[i[1] for i in rows_a_c], n_new_ids=n_a_c_e)
+
+    # Create the DataFrame
+    df_a = spark.createDataFrame(rows_a, schema_a)
+    df_a_b = spark.createDataFrame(rows_a_b, schema_a_b)
+    df_a_c = spark.createDataFrame(rows_a_c, schema_a_c)
+    df_a_c_d = spark.createDataFrame(rows_a_c_d, schema_a_c_d)
+    df_a_c_e = spark.createDataFrame(rows_a_c_e, schema_a_c_e)
+    df_a.join(df_a_b, on="id1").join(df_a_c, on="id1").join(df_a_c_d, on="id3")
+    df_a_c_e.show(truncate=False)
+    # Join everything
+    df_join = (
+        df_a.join(df_a_b, on="id1")
+        .join(df_a_c, on="id1")
+        .join(df_a_c_d, on="id3")
+        .join(df_a_c_e, on="id3")
+    )
+
+    # Nested structure
+    # show
+    df_nested = df_join.withColumn("id3", f.struct(f.col("id3"))).orderBy("id4")
+
+    for i, index in enumerate([(5, 3), (4, 3), (3, None)]):
+        remaining_columns = list(set(df_nested.columns).difference(set([f"id{index[0]}"])))
+        df_nested = (
+            df_nested.groupby(*remaining_columns)
+            .agg(f.collect_list(f.col(f"id{index[0]}")).alias(f"id{index[0]}_tmp"))
+            .drop(f"id{index[0]}")
+            .withColumnRenamed(
+                f"id{index[0]}_tmp",
+                f"id{index[0]}",
+            )
+        )
+
+        if index[1]:
+            df_nested = df_nested.withColumn(
+                f"id{index[1]}",
+                f.struct(
+                    f.col(f"id{index[1]}.*"),
+                    f.col(f"id{index[0]}"),
+                ).alias(f"id{index[1]}"),
+            ).drop(f"id{index[0]}")
+
+    # Investigate for duplicates in id3 (should be unique)
+    df_test = df_nested.select("id2", "extra", f.explode(f.col("id3")["id3"]).alias("id3"))
+
+    for i in range(30):
+        df_test.groupby("id3").count().filter(f.col("count") > 1).show()
+
+
+def q_76108321():
+    df1 = spark.read.option("multiline", "true").json("./ressources/76108321_1.json")
+    df2 = spark.read.option("multiline", "true").json("./ressources/76108321_2.json") \
+        .withColumnRenamed("data", "data_2").withColumnRenamed("id", "id_2").withColumnRenamed("total_seconds",
+                                                                                               "total_seconds_2")
+
+    df1_exploded = df1.withColumn("data", explode(col("data")))
+    df2_exploded = df2.withColumn("data_2", explode(col("data_2"))).drop("total_seconds_2")
+
+    resultDf = df1_exploded.join(df2_exploded, (df1_exploded.id == df2_exploded.id_2) & (
+            df1_exploded.data.id == df2_exploded.data_2.id), "outer") \
+        .withColumn("id", coalesce(col("id"), col("id_2"))) \
+        .withColumn("data",
+                    struct(coalesce(col("data.id"), col("data_2.id")), coalesce(col("data.name"), col("data_2.name")),
+                           coalesce(col("data.seconds"), lit(0)) + coalesce(col("data_2.seconds"), lit(0)))) \
+        .select("data", "id", "total_seconds") \
+        .groupby("id").agg(collect_list("data").alias("data"))
+
+    total_seconds_df = df1.join(df2, df1.id == df2.id_2, "outer") \
+        .withColumn("id", coalesce(col("id"), col("id_2"))) \
+        .withColumn("total_seconds", coalesce(col("total_seconds"), lit(0)) + coalesce(col("total_seconds_2"), lit(0))) \
+        .select("id", "total_seconds")
+    resultDf = resultDf.join(total_seconds_df, ["id"], "left")
+    resultDf.show(truncate=False)
+    resultDf.repartition(1).write.mode("overwrite").json("./ressources/output/76108321.json")
+
+
+def q_76138313():
+    import pandas as pd
+
+    from pyspark.sql.functions import isnan
+
+    users = {
+        'name': ['John', None, 'Mike'],
+        'salary': [400.0, None, 200.0]
+    }
+
+    pdf = pd.DataFrame(users)
+    sdf = spark.createDataFrame(pdf)
+
+    # filter out the rows with salaries greater than 300
+    # sdf_filtered = sdf.filter(~isnan(sdf.salary) & (sdf.salary > 300))
+    sdf.filter(sdf.name != "John").show()
+
+
+def q_76133727():
+    import pyspark.pandas as ps
+    import pandas as pd
+
+    df_pandas = spark.read.option("multiline", "true").json('./ressources/76133727.json')
+    df_pandas.show()
+
+
+def q_76149371():
+    from pyspark.sql.functions import max
+
+    df = spark.read.option("header", "true").option("delimiter", ";").csv("./ressources/76149371.csv")
+    df.show(truncate=False)
+    max_rank = df.agg(max("rank")).collect()[0][0]
+    for i in range(1, int(max_rank) + 2):
+        df = df.withColumn(f"sub{i}", when(col("rank") == i, col("sub")).otherwise(lit(0)))
+    df.show(truncate=False)
+
+
+def q_76148734():
+    data = [
+        ("A", ["1", "2", "3"], ["4", "5"], ["6"]),
+        ("B", ["7", "8"], ["9"], ["10", "11", "12"]),
+        ("C", ["13", "14", "15"], ["16", "17"], ["18", "19"]),
+    ]
+    df = spark.createDataFrame(data, ["col1", "array_col1", "array_col2", "array_col3"])
+    df.show(truncate=False)
+    expanded_df = df.select("col1", *[col("array_col1")[i].alias(f"col_{i + 1}") for i in range(3)])
+
+
+def q_76150614():
+    import pyspark.pandas as ps
+    import pandas as pd
+    import requests
+
+    def get_vals(row):
+
+        # make api call
+        return row['A'] * row['B']
+
+    # Create a pandas DataFrame
+    pdf = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
+
+    # apply function - get api responses
+    pdf['api_response'] = pdf.apply(lambda row: get_vals(row), axis=1)
+    pdf.sample(5)
+    # Unpack JSON API Response
+    try:
+        df = pd.json_normalize(pdf['api_response'].str['location'])
+    except TypeError as e:
+        print(f"Error: {e}")
+
+    # To pySpark DataFrame
+    psdf = ps.DataFrame(df)
+    psdf.head(5)
+
+
+def q_76362482():
+    data = [
+        ("A", ["comedy", "horror"]),
+        ("B", ["romance", "comedy"]),
+        ("C", ["thriller", "sci-fi"]),
+        ("D", ["sci-fi", "horror", "thriller"]),
+        ("E", ["sci-fi", "horror", "comedy"]),
+        ("E", ["sci-fi", "romance", "comedy"]),
+        ("E", ["horror", "romance", "comedy"]),
+        ("E", ["thriller", "romance", "comedy"]),
+    ]
+    df = spark.createDataFrame(data, ["movie_description", "tags"])
+    explodedDF = df.withColumn("id", monotonically_increasing_id()).withColumn("tags", explode(col("tags"))).select(
+        "id", "tags")
+    joinDf = explodedDF.join(explodedDF.withColumnRenamed("tags", "tags2"), ["id"], "left").filter(
+        col("tags") != col("tags2"))
+    pairCounts = joinDf.groupBy("tags", "tags2").count()
+    pairCounts.show()
+    maxCountValue = pairCounts.agg(functions.max(col("count"))).first()[0]
+    max_tag_1 = pairCounts.filter(col("count") == maxCountValue).select("tags").first()[0]
+    max_tag_2 = pairCounts.filter(col("count") == maxCountValue).select("tags2").first()[0]
+    print(max_tag_1, max_tag_2)
+
+
+def q_76362482_2():
+    from pyspark.sql.functions import col, size, array_sort
+    from pyspark.ml.fpm import FPGrowth
+
+    df = spark.createDataFrame([
+        ("A", ["comedy", "horror"]),
+        ("B", ["romance", "comedy"]),
+        ("C", ["thriller", "sci-fi"]),
+        ("D", ["sci-fi", "horror", "thriller"]),
+        ("E", ["sci-fi", "horror", "comedy"]),
+        ("E", ["sci-fi", "romance", "comedy"]),
+        ("E", ["horror", "romance", "comedy"]),
+        ("E", ["thriller", "romance", "comedy"]),
+    ], ["id", "items"])
+
+    # Sort tags to ignore pairs order
+    df = df.withColumn('items', array_sort(col('items')))
+
+    fpGrowth = FPGrowth(itemsCol="items", minSupport=0.1, minConfidence=0.1)
+    model = fpGrowth.fit(df)
+
+    freq_tags = model.freqItemsets.filter(size(col('items')) == 2).sort(col('freq').desc())
+
+    freq_tags.show()
+
+
+def q_76366517():
+    data1 = [("A", None, 1, 'Highest'), ("B", "A", 2, 'Medium'), ("C", "B", 3, 'Lowest'), ("D", "B", 3, 'Lowest')]
+    df1 = spark.createDataFrame(data=data1, schema=['ID', 'ParentID', 'Hierarchy', 'HierarchyName'])
+
+    df = df1.select(col("ID"), col("ParentID"),
+                    functions.array(col("ID"), col("Hierarchy"), col("HierarchyName")).alias("HierarchyTree"))
+    df2 = df.drop("ID")
+    df = df.drop("ParentID")
+    join = df.join(df2, df.ID == df2.ParentID, "left")
+
+    join.show()
+
+
+def q_76398305():
+    from pyspark.sql import SparkSession
+
+    from pyspark.sql.functions import udf
+    # Create a SparkSession
+
+    # Sample DataFrame with hex values
+    data = [("48656c6c6f20576f726c64",),
+            ("53616d706c65204279746573",),
+            ("74657374206d657373616765",),
+            ("48656c6c6f20576f726c647a21",),  # With non-hex character 'z'
+            ("546573742e",)]  # With non-hex character '.'
+
+    df = spark.createDataFrame(data, ["value"])
+
+    byte_array_to_ascii = udf(lambda x: bytearray(x).decode('utf-8'))
+    df = df.withColumn("ascii_value", byte_array_to_ascii("value"))
+    df.show()
+
+
+def q_76433635():
+    df = spark.createDataFrame([(0, "A", 1), (1, "A", None), (2, "B", 2), (3, "B", None), (4, "B", 3)],
+                               ["id", "col1", "col2"])
+    pdf_lookup = spark.createDataFrame([(0, "A", 4), (1, "B", 5)], ["id", "col1", "col2"])
+
+    pdf_lookup = pdf_lookup.select(col("col1"), col("col2").alias("col2_tmp"))
+    df.join(pdf_lookup, ["col1"], "left").withColumn("col2", coalesce(col("col2"), col("col2_tmp"))).drop(
+        "col2_tmp").show()
+
+
+def q_x():
+    df = spark.createDataFrame([(0, "azeazeazqsdf456546541", 1), (1, "12a32ze1aze51az65az", None)],
+                               ["id", "couple_zone", "valeur"])
+
+    df.withColumn("substr1", substring("couple_zone", 1, 8)).withColumn("substr2",
+                                                                        substring("couple_zone", -8, 8)).show()
+
+
+def q_76531824():
+    df = spark.createDataFrame([
+        (1, 10.02, "2023-01-28 19:22:59.266508"),
+        (1, 2.02, "2023-01-28 20:22:59.266508"),
+        (1, 5.0, "2023-02-28 12:21:34.466508"),
+        (2, 18.32, "2023-01-18 01:34:01.222408")
+    ], ["userID", "amount", "date"])
+
+    df = df.withColumn("date", to_date("date")).groupby("date").agg(first("userID").alias("userID"),
+                                                                    first("amount").alias("amount"),
+                                                                    sum("amount").alias("acummulated_amount")) \
+        .withColumn("acummulated_amount", sum("acummulated_amount").over(Window.partitionBy("userID").orderBy("date")))
+    df.show()
+
+
+def q_76907940():
+    Programmatic_df = spark.createDataFrame([
+        ("amazon", "IO123456"),
+        ("google", "IO113456"),
+        ("google", "IO111456"),
+        ("yahoo", "IO111156"),
+        ("amazon", "IO111116")
+    ], ["Company", "contract number"])
+
+    window_spec = Window.orderBy('Company')
+    Programmatic_df = Programmatic_df.withColumn('Company number', dense_rank().over(window_spec))
+    Programmatic_df.show()
+
+
+def q_76907274():
+    df = spark.createDataFrame([(14, "Tom"), (23, "Alice"), (16, "Bob")], ["age", "name"])
+
+    def func(itr):
+        for person in itr:
+            print(person.name)
+
+    df.foreachPartition(func)
+
+
+def q_76926353():
+    df = spark.createDataFrame([(162038, "04/04/23 18:42", 1258, 972395),
+                                (162038, "04/04/23 18:42", 1258, 551984),
+                                (162038, "04/04/23 18:42", 1258, 488298),
+                                (162038, "04/04/23 18:42", 1258, 649230),
+                                (162038, "26/02/23 16:28", 2715, 372225),
+                                (162038, "26/02/23 16:28", 2715, 911716),
+                                (162038, "26/02/23 16:28", 2715, 696677),
+                                (162038, "26/02/23 16:28", 2715, 229455),
+                                (162038, "26/02/23 16:28", 2715, 870016),
+                                (162038, "29/01/23 13:07", 1171, 113719),
+                                (162038, "29/01/23 13:07", 1171, 553461),
+                                (162060, "01/05/23 18:42", 1259, 300911),
+                                (162060, "01/05/23 18:42", 1259, 574962),
+                                (162060, "01/05/23 18:42", 1259, 843300),
+                                (162060, "01/05/23 18:42", 1259, 173719),
+                                (162060, "05/05/23 18:42", 2719, 254899),
+                                (162060, "05/05/23 18:42", 2719, 776553),
+                                (162060, "05/05/23 18:42", 2719, 244739),
+                                (162060, "05/05/23 18:42", 2719, 170742),
+                                (162060, "05/05/23 18:42", 2719, 525719),
+                                (162060, "10/05/23 18:42", 1161, 896919),
+                                (162060, "10/05/23 18:42", 1161, 759465)],
+                               ["customer_id", "order_ts", "order_nbr", "item_nbr"])
+
+    window_spec = Window.partitionBy("customer_id").orderBy("order_ts")
+    df = df.withColumn("row_num", dense_rank().over(window_spec))
+    df.show()
+
+
 if __name__ == "__main__":
-    q_75368847()
+    q_76926353()

@@ -1,0 +1,17 @@
+{
+  "fd": "Bank Account",
+  "appVar": [],
+  "varMode": "AABH",
+  "occurred": [
+    {
+      "occurredTimes": 3,
+      "sys": [
+        {
+          "varTyp": "Conf Param",
+          "varCode": "P33"
+        }
+      ],
+      "userAssignments": []
+    }
+  ]
+}

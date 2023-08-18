@@ -1,0 +1,25 @@
+[{
+    "id": 1,
+    "data": [{
+        "id": "123",
+        "name": "name1",
+        "seconds": 50
+    }, {
+        "id": "234",
+        "name": "name2",
+        "seconds": 25
+    }],
+    "total_seconds": 100
+}, {
+    "id": 2,
+    "data": [{
+        "id": "123",
+        "name": "name1",
+        "seconds": 100
+    }, {
+        "id": "234",
+        "name": "name2",
+        "seconds": 200
+    }],
+    "total_seconds": 400
+}]
