@@ -5,15 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="4d7ea1a9-4432-4dc7-84be-5af041dccd7d" name="Default" comment="++">
-      <change afterPath="$PROJECT_DIR$/wordcount/ressources/76108321_1.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/wordcount/ressources/76108321_2.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/wordcount/ressources/76133727.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/wordcount/ressources/76149347.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/wordcount/ressources/76149371.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/pyspark-ide-starter.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/pyspark-ide-starter.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/wordcount/ressources/77443290.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/wordcount/ressources/77633394.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/wordcount/ressources/77769586.csv" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/wordcount/stackoverflow.py" beforeDir="false" afterPath="$PROJECT_DIR$/wordcount/stackoverflow.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -112,7 +107,7 @@
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/d4rkc0de/Projects/test/AnimatedDrawings&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/d4rkc0de/Projects/trending/AnimatedDrawings&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -215,7 +210,37 @@
       <workItem from="1687784070366" duration="23000" />
       <workItem from="1692125249585" duration="1110000" />
       <workItem from="1692134856202" duration="5000" />
-      <workItem from="1692353664332" duration="2862000" />
+      <workItem from="1692353664332" duration="3420000" />
+      <workItem from="1692615011962" duration="10000" />
+      <workItem from="1692899026146" duration="4000" />
+      <workItem from="1695991871677" duration="1380000" />
+      <workItem from="1696197747945" duration="9000" />
+      <workItem from="1698782663207" duration="374000" />
+      <workItem from="1699434556849" duration="3490000" />
+      <workItem from="1699451468708" duration="774000" />
+      <workItem from="1699453381578" duration="656000" />
+      <workItem from="1699474864973" duration="5756000" />
+      <workItem from="1699827059306" duration="78000" />
+      <workItem from="1700857964845" duration="2226000" />
+      <workItem from="1701099981100" duration="829000" />
+      <workItem from="1701126926376" duration="14000" />
+      <workItem from="1701204321422" duration="40000" />
+      <workItem from="1701552483620" duration="3050000" />
+      <workItem from="1701555977062" duration="16000" />
+      <workItem from="1702028384124" duration="2775000" />
+      <workItem from="1702031466181" duration="472000" />
+      <workItem from="1702063242770" duration="6634000" />
+      <workItem from="1702312146294" duration="2343000" />
+      <workItem from="1702477880829" duration="1734000" />
+      <workItem from="1702934270604" duration="784000" />
+      <workItem from="1703064757173" duration="1324000" />
+      <workItem from="1703238301809" duration="1502000" />
+      <workItem from="1704113651777" duration="22000" />
+      <workItem from="1704565663689" duration="324000" />
+      <workItem from="1704576368697" duration="3332000" />
+      <workItem from="1704628280176" duration="68000" />
+      <workItem from="1704629550893" duration="869000" />
+      <workItem from="1705674762563" duration="1687000" />
     </task>
     <task id="LOCAL-00001" summary="++">
       <created>1682113315135</created>
@@ -231,7 +256,14 @@
       <option name="project" value="LOCAL" />
       <updated>1682113490679</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="++">
+      <created>1692369415941</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1692369415941</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="ToolWindowManager">
@@ -275,8 +307,19 @@
     <MESSAGE value="++" />
     <option name="LAST_COMMIT_MESSAGE" value="++" />
   </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/wordcount/stackoverflow.py</url>
+          <line>980</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/pyspark_ide_starter$stackoverflow.coverage" NAME="stackoverflow Coverage Results" MODIFIED="1692369238810" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wordcount" />
+    <SUITE FILE_PATH="coverage/pyspark_ide_starter$stackoverflow.coverage" NAME="stackoverflow Coverage Results" MODIFIED="1705675568842" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/wordcount" />
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/setup.py">

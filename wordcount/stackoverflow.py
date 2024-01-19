@@ -6,8 +6,8 @@ from pyspark.sql.functions import col, to_date, last_day, lit, when, lower, conc
     month, lpad, split, expr, udf, posexplode, regexp_replace, collect_set, lag, approx_count_distinct, coalesce, \
     row_number, explode, monotonically_increasing_id, first, from_json, aggregate, create_map, map_concat, to_json, \
     flatten, transform, collect_list, concat_ws, struct, to_timestamp, format_number, isnan, unhex, substring, \
-    dense_rank
-from pyspark.sql.types import StructType, ArrayType, MapType, StringType
+    dense_rank, last, desc, asc, arrays_zip, datediff, array, map_zip_with, map_from_arrays, array_repeat
+from pyspark.sql.types import StructType, ArrayType, MapType, StringType, StructField, IntegerType, DoubleType
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -865,5 +865,405 @@ def q_76926353():
     df.show()
 
 
+def q_77396807():
+    from pyspark.sql import SparkSession
+    import pyspark.sql.functions as f
+    from pyspark.sql.window import Window as w
+    from datetime import datetime, date
+    spark = SparkSession.builder.config("spark.sql.repl.eagerEval.enabled", True).getOrCreate()
+
+    # Base dataframe
+    df = spark.createDataFrame(
+        [
+            (1, date(2023, 10, 1), date(2023, 10, 2), "open"),
+            (1, date(2023, 10, 2), date(2023, 10, 3), "close"),
+            (2, date(2023, 10, 1), date(2023, 10, 2), "close"),
+            (2, date(2023, 10, 2), date(2023, 10, 4), "close"),
+            (3, date(2023, 10, 2), date(2023, 10, 4), "open"),
+            (3, date(2023, 10, 3), date(2023, 10, 6), "open"),
+        ],
+        schema="id integer, date_start date, date_end date, status string"
+    )
+
+    # We define two partition functions
+    partition = w.partitionBy("id").orderBy("date_start", "date_end").rowsBetween(w.unboundedPreceding,
+                                                                                  w.unboundedFollowing)
+    partition2 = w.partitionBy("id").orderBy("date_start", "date_end")
+
+    # Define dataframe A
+    A = df.withColumn(
+        "date_end_of_last_close",
+        f.max(f.when(f.col("status") == "close", f.col("date_end"))).over(partition)
+    ).withColumn(
+        "rank",
+        f.row_number().over(partition2)
+    )
+    A.show()
+    A_result = A.filter(f.col("rank") == 1).drop("rank")
+    A_result.show()
+
+
+def q_77443290():
+    df = spark.read.option("multiline", "true").json("./ressources/77443290.json")
+    df = df.withColumn("mydoc", explode("mydoc")).select("mydoc.*").withColumn("Information",
+                                                                               explode("Information")).select(
+        "Information.*")
+    df = df.groupby().agg(*[concat_ws(",", collect_list(col)).alias(f"flat{col}") for col in df.columns])
+    df.explain()
+
+
+def q_77448212():
+    localdf = spark.createDataFrame(
+        spark.sparkContext.parallelize(
+            [
+                [1, 24, None, None],
+                [1, 23, None, None],
+                [1, 22, 1, 1],
+                [1, 21, None, 1],
+                [1, 20, None, 1],
+                [1, 19, 1, 1],
+                [1, 18, None, None],
+                [1, 17, None, None],
+                [1, 16, 2, 2],
+                [1, 15, None, None],
+                [1, 14, None, None],
+                [1, 13, 3, 3],
+            ]
+        ),
+        ["ID", "Record", "Target", "ExpectedValue"],
+    )
+
+    localdf.show()
+
+    w = Window.partitionBy("ID").orderBy(desc("Record"))
+    w2 = Window.partitionBy("ID").orderBy(asc("Record"))
+    localdf = localdf.withColumn("last_desc", last("Target", ignorenulls=True).over(w)) \
+        .withColumn("last_asc", last("Target", ignorenulls=True).over(w2)) \
+        .withColumn("result", when(col("last_desc") == col("last_asc"), col("last_asc")).otherwise(None))
+    localdf.orderBy("ID", desc("Record")).show()
+
+
+def q_77449438():
+    # Define the data
+    data = [
+        (3333, [{"code": 123, "description": "Business Email"}, {"code": 789, "description": "Primary Email"}]),
+        (9234, [{"code": 123, "description": "Business Email"}, {"code": 789, "description": "Primary Email"},
+                {"code": 456, "description": "Secondary Email"}])
+    ]
+
+    # Define the schema for the DataFrame
+    schema = StructType([
+        StructField("ID", IntegerType(), True),
+        StructField("struct_field", ArrayType(StructType([
+            StructField("code", IntegerType(), True),
+            StructField("description", StringType(), True)
+        ]), True), True)
+    ])
+
+    # Create the DataFrame
+    df = spark.createDataFrame(data, schema)
+    df.printSchema()
+    df.withColumn("struct_field", explode("struct_field")).select("ID", "struct_field.*").show(truncate=False)
+
+
+def q_77539886():
+    df = spark.createDataFrame([
+        (4, 2, 7, 9, 1, 3)
+    ], ["A", "B", "C", "D", "E", "F"])
+    for column in df.columns:
+        df = df.withColumn(column, struct(col(column), lit(" " + column)))
+    df.show()
+    df = df.select(col("A").cast("string"), col("B").cast("string"))
+
+    concatenation_expr = expr("concat_ws(', ', {}) as AllData".format(", ".join(df.columns)))
+    concatenation_expr = expr("concat_ws({}) as AllData".format(", ".join(["'{}'".format(col) for col in df.columns])))
+
+    concatenated_df = df.selectExpr("*", concatenation_expr)
+
+    concatenated_df.show()
+
+
+def q_77558127():
+    spark_df = spark.createDataFrame([
+        (4, 2, 7, 9, 1, 3)
+    ], ["A", "B", "C", "D", "E", "F"])
+
+    def my_function(row, index_name):
+        return True
+
+    def partition_func(rows):
+        for row in rows:
+            print(row)
+        return my_function(rows, "blabla")
+
+    spark_df.foreachPartition(partition_func)
+
+
+def q_77587293():
+    df = spark.createDataFrame([(['a', 'b', 'c'], [1, 4, 2], 3),
+                                (['b', 'd'], [7, 2], 1),
+                                (['a', 'c'], [1, 2], 8)], ["id", "label", "md"])
+
+    df = df.selectExpr("md", "inline(arrays_zip(id, label))")
+    w = Window.partitionBy("md")
+    df.withColumn("mx_label", functions.max("label").over(w)).filter(col("label") == col("mx_label")).drop(
+        "mx_label").show(truncate=False)
+
+
+def q_77582760():
+    df = spark.createDataFrame(
+        [(1, 1), (2, None), (3, None), (4, None), (5, 5), (6, None), (7, None), (8, 8), (9, None), (10, None),
+         (11, None), (12, None)],
+        ["row_id", "group_id"])
+
+    df.withColumn("group_id", last("group_id", ignorenulls=True).over(Window.orderBy("row_id"))).show()
+
+
+def q_77587293():
+    df = spark.createDataFrame([(['a', 'b', 'c'], [1, 4, 2], 3),
+                                (['b', 'd'], [7, 2], 1),
+                                (['a', 'c'], [1, 2], 8)], ["id", "label", "md"])
+
+    df = df.selectExpr("md", "inline(arrays_zip(id, label))")
+    w = Window.partitionBy("md")
+    df.withColumn("mx_label", functions.max("label").over(w)).filter(col("label") == col("mx_label")).drop(
+        "mx_label").show(truncate=False)
+
+
+def q_77625270():
+    df = spark.createDataFrame([
+        (11, "09/11/2023"),
+        (11, "13/11/2023"),
+        (11, "15/11/2023"),
+        (11, "21/11/2023"),
+        (11, "23/11/2023"),
+        (11, "24/11/2023"),
+        (12, "16/11/2023"),
+        (12, "21/11/2023"),
+        (12, "25/11/2023"),
+        (12, "01/12/2023"),
+        (12, "03/12/2023"),
+        (12, "05/12/2023")
+    ], ["Cust_Id", "Date_Of_Purchase"])
+    w = Window.partitionBy("Cust_Id").orderBy("Date_Of_Purchase")
+    df = df.withColumn("Date_Of_Purchase", to_date(col("Date_Of_Purchase"), "dd/MM/yyyy")) \
+        .withColumn("Prev_Date_Of_Purchase", lag("Date_Of_Purchase", 2).over(w)) \
+        .withColumn("days_between", datediff(col("Date_Of_Purchase"), col("Prev_Date_Of_Purchase")))
+    df.show()
+
+    df.filter(col("days_between") <= 5).select("Cust_Id").distinct().show()
+
+
+def q_77623335():
+    df1 = spark.createDataFrame([
+        (1, 1, 2, 11),
+        (1, 2, 2, 13),
+        (2, 1, 4, 14),
+        (2, 1, 2, 77),
+    ], ["_change_type", "update_preimage", "update_postimage", "external_id"])
+    dfX = df1.filter(df1['_change_type'] == 'update_preimage')
+    dfY = df1.filter(df1['_change_type'] == 'update_postimage')
+
+    dfX.show()
+    dfY.show()
+    from pyspark.sql.functions import col, array, lit, when, array_remove
+
+    # get conditions for all columns except id
+    # conditions_ = [when(dfX[c]!=dfY[c], lit(c)).otherwise("") for c in dfX.columns if c != ['external_id', '_change_type']]
+
+    select_expr = [
+        col("external_id"),
+        *[dfY[c] for c in dfY.columns if c != 'external_id'],
+        # array_remove(array(*conditions_), "").alias("column_names")
+    ]
+
+    print(select_expr)
+
+    dfX.join(dfY, "external_id").select(*select_expr).show()
+
+
+def q_77628601():
+    data = [("Alice", ["apple", "banana", "orange"], 5, 8, 3),
+            ("Bob", ["apple"], 2, 9, 1)]
+    schema = ["name", "fruits", "apple", "banana", "orange"]
+    df = spark.createDataFrame(data, schema=schema)
+
+    df.withColumn("array", array(col("apple"), col("banana"), col("orange"))) \
+        .withColumn("new_col", arrays_zip("fruits", "array")).drop("array") \
+        .withColumn("new_col", expr("filter(new_col, x-> x.fruits IS NOT NULL)")) \
+        .withColumn("new_col", udf(dict, MapType(StringType(), IntegerType()))(col("new_col"))).show(truncate=False)
+
+
+def q_77633394():
+    df = spark.read.option("multiline", "true").json("./ressources/77633394.json")
+    df = df.select("data.*", "datetime").select("occupancy.*", "datetime")
+    df.show(truncate=False)
+
+    # Register the UDF with Spark
+    parse_struct_udf = udf(list, ArrayType(DoubleType()))
+
+    # Use the UDF to transform the struct column into an array column
+    df = df.select("datetime", lit("2023").alias("year"), "ltm", explode(parse_struct_udf("2023")).alias("values")) \
+        .union(
+        df.select("datetime", lit("2024").alias("year"), "ltm", explode(parse_struct_udf("2024")).alias("values")))
+    df.show(truncate=False)
+
+
+def q_77653807():
+    persons = spark.createDataFrame([
+        ("John", 25, 100483, "john@abc.com"),
+        ("Sam", 49, 448900, "sam@abc.com"),
+        ("Will", 63, None, "will@abc.com"),
+        ("Robert", 20, 299011, None),
+        ("Hill", 78, None, "hill@abc.com"),
+    ], schema=["name", "age", "serial_no", "mail"])
+    persons.show(truncate=False)
+    people = spark.createDataFrame([
+        ("John", 100483, "john@abc.com"),
+        ("Sam", 448900, "sam@abc.com"),
+        ("Will", 229809, "will@abc.com"),
+        ("Robert", 299011, None),
+        ("Hill", 567233, "hill@abc.com"),
+    ], schema=["name", "s_no", "e_mail"])
+    people.show(truncate=False)
+    final_df = persons.join(people.select("s_no", "e_mail"), persons.mail == people.e_mail, "left") \
+        .withColumn("serial_no", coalesce("serial_no", "s_no")).drop("s_no", "e_mail")
+    final_df.show()
+
+
+def q_77680762():
+    df1 = spark.createDataFrame([
+        ("1A", "3412asd", "value-1", 25, "UK"),
+        ("2B", "2345tyu", "value-2", 34, "IE"),
+        ("3C", "9800bvd", "value-3", 56, "US"),
+        ("4E", "6789tvu", "value-4", 78, "IN")
+    ], schema=["ID", "Company_Id", "value", "score", "region"])
+    df1.show(truncate=False)
+    df2 = spark.createDataFrame([("1A", "3412asd", "value-1", 25, "UK"),
+                                 ("2B", "2345tyu", "value-5", 36, "IN"),
+                                 ("3C", "9800bvd", "value-3", 56, "US")],
+                                schema=["ID", "Company_Id", "value", "score", "region"])
+    df2.show(truncate=False)
+    df1.select("ID", "Company_Id").exceptAll(df2.select("ID", "Company_Id")).join(df1, on=["ID", "Company_Id"]).show(
+        truncate=False)
+    df1.select("ID", "Company_Id", "score").join(df2.select("ID", "Company_Id", "score"), on='ID', how='anti').show(
+        truncate=False)
+
+
+def q_77685797():
+    from pyspark.sql import SparkSession
+    from pyspark.sql.functions import col
+
+    # Create a Spark session
+    spark = SparkSession.builder.appName("example").getOrCreate()
+
+    # Example DataFrames
+    map_data = [('a', 'b', 'c', 'good'), ('a', 'a', '*', 'very good'),
+                ('b', 'd', 'c', 'bad'), ('a', 'b', 'a', 'very good'),
+                ('c', 'c', '*', 'very bad'), ('a', 'b', 'b', 'bad')]
+
+    columns = ["col1", "col2", 'col3', 'result']
+
+    mapping_table = spark.createDataFrame(map_data, columns)
+
+    data = [[('a', 'b', 'c'), ('a', 'a', 'b'),
+             ('c', 'c', 'a'), ('c', 'c', 'b'),
+             ('a', 'b', 'b'), ('a', 'a', 'd')
+             ]]
+
+    columns = ["col1", "col2", 'col3']
+    df = spark.createDataFrame(data, columns)
+    mapping_table.show(truncate=False)
+    df.show(truncate=False)
+
+
+def q_77689901():
+    df = spark.createDataFrame([("Hero", "Msg"), ("Hero", "MTC")], ["component", "offer"])
+
+    df = df.withColumn("id", lit(1))
+    w = Window().orderBy(col('id'))
+    df = df.withColumn("row_num", row_number().over(w) - 1)
+    df = df.groupBy("id").agg(
+        map_from_arrays(collect_list("row_num"), collect_list("component")).alias("component"),
+        map_from_arrays(collect_list("row_num"), collect_list("offer")).alias("offer"))
+    df = df.withColumn("json", to_json(struct("component", "offer")))
+    df.show(truncate=False)
+
+    json_schema = StructType([
+        StructField("component", StructType([
+            StructField("0", StringType(), True),
+            StructField("1", StringType(), True)
+        ]), True),
+        StructField("offer", StructType([
+            StructField("0", StringType(), True),
+            StructField("1", StringType(), True)
+        ]), True)
+    ])
+    df = df.withColumn("json", from_json(col("json"), json_schema))
+
+    df.show(truncate=False)
+    df.printSchema()
+
+
+def q_77702813():
+    df = spark.createDataFrame([
+        (18, "AAA", 2, 1, 5),
+        (18, "BBB", 2, 2, 4),
+        (16, "BBB", 2, 3, 3),
+        (16, "CCC", 2, 4, 2),
+        (17, "CCC", 1, 5, 1)
+    ], ["id", "Type", "id_count", "Value1", "Value2"])
+
+    filter_cond = (df['id_count'] == 2) & (df['Type'] != 'AAA')
+    df1 = df.filter(filter_cond)
+    df2 = df.filter(~filter_cond)
+    df1.groupby("id").agg(
+        concat_ws("+", collect_list("Type")).alias("Type"),
+        first("id_count"),
+        sum("Value1").alias("Value1"),
+        sum("Value2").alias("Value2")
+    ).union(df2).show()
+
+
+def q_77769586():
+    from pyspark.sql import SparkSession
+    from os import system as ossystem
+    import time
+
+    spark = SparkSession.builder.master("local[4]").getOrCreate()
+    txtfile = spark.read.text("./ressources/77769586.csv")
+    print(txtfile.count())
+    txtfile.explain()
+    time.sleep(10)
+
+    print(txtfile.count())
+    txtfile.explain()
+
+
+def q_77845666():
+    df_assembled = spark.createDataFrame([
+        (18, "AAA", 2, 1, 5),
+        (18, "BBB", 2, 2, 4),
+        (16, "BBB", 2, 3, 3),
+        (16, "CCC", 2, 4, 2),
+        (17, "CCC", 1, 5, 1)
+    ], ["col1", "Type", "id_count", "Value1", "Value2"])
+
+    outlier_df = spark.createDataFrame([
+        (1, "ZZZ", 2),
+        (2, "YYY", 2),
+        (3, "XXX", 2),
+        (4, "RRR", 2),
+        (5, "SSS", 1)
+    ], ["aa", "bb", "cc"])
+
+    from pyspark.sql.functions import monotonically_increasing_id
+    w = Window.orderBy(monotonically_increasing_id())
+    df_assembled = df_assembled.withColumn("x", monotonically_increasing_id())
+    df_assembled = df_assembled.withColumn("id", row_number().over(w))
+    outlier_df = outlier_df.withColumn("id", row_number().over(w))
+    result_df = df_assembled.join(outlier_df, df_assembled.id == outlier_df.id, how='inner')
+    result_df.show()
+
 if __name__ == "__main__":
-    q_76926353()
+    q_77845666()

@@ -1,0 +1,26 @@
+{
+  "mydoc": [
+    {
+      "Driver": 12345,
+      "Information": [
+        {
+          "Name": "john",
+          "Id": 1,
+          "Car": "ferrari",
+          "Age": 12
+        }
+      ]
+    },
+    {
+      "Driver": 67890,
+      "Information": [
+        {
+          "Name": "mike",
+          "Id": 2,
+          "Car": "polo",
+          "Age": 24
+        }
+      ]
+    }
+  ]
+}
